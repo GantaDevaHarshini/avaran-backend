@@ -23,33 +23,28 @@ public class AuthController {
 
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody User user) {
-        if (isBlank(user.getName()) || isBlank(user.getEmail()) || isBlank(user.getPassword())) {
-            return ResponseEntity.badRequest().body(new ErrorResponse("Name, email, and password are required."));
+        try {
+            User savedUser = repo.save(user);
+            return ResponseEntity.ok(savedUser);
+        } catch (Exception e) {
+            e.printStackTrace(); // VERY IMPORTANT
+            return ResponseEntity.badRequest().body("Registration failed");
         }
-
-        if (repo.existsByEmail(user.getEmail())) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(new ErrorResponse("Email is already registered."));
-        }
-
-        User savedUser = repo.save(user);
-        return ResponseEntity.status(HttpStatus.CREATED).body(UserResponse.from(savedUser));
     }
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody User user) {
-        if (isBlank(user.getEmail()) || isBlank(user.getPassword())) {
-            return ResponseEntity.badRequest().body(new ErrorResponse("Email and password are required."));
-        }
 
         User existing = repo.findByEmail(user.getEmail());
 
-        if (existing == null || !existing.getPassword().equals(user.getPassword())) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new ErrorResponse("Invalid credentials."));
+        if (existing != null && existing.getPassword().equals(user.getPassword())) {
+            return ResponseEntity.ok(existing);
         }
 
-        return ResponseEntity.ok(UserResponse.from(existing));
+        return ResponseEntity
+                .badRequest()
+                .body("Invalid email or password");
     }
-
     private boolean isBlank(String value) {
         return value == null || value.trim().isEmpty();
     }
